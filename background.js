@@ -62,7 +62,6 @@ var xsievents_options = {
 	onChannelTerminated : function(data) {
 		LOGGER.API.log(MODULE, "channel terminated");
 		setServiceStatesToUnknown();
-		connect();
 	},
 	onError : onError,
 	onDisconnected : onDisconnected
