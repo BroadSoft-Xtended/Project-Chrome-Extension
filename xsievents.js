@@ -25,13 +25,15 @@ XSIEVENTS.API = (function() {
 	var channelSetId = "";
 	var channelId = "";
 	var applicationId = "";
+	var heartbeatId = "";
 
 	callbacks = {
 		onChannelAdded : null,
 		onEvent : null,
 		onSubscriptionTerminated : null,
 		onChannelTerminated : null,
-		onError : null
+		onError : null,
+		onDisconnected : null
 	};
 
 	function init(options) {
@@ -46,14 +48,17 @@ XSIEVENTS.API = (function() {
 			callbacks.onSubscriptionTerminated = options.onSubscriptionTerminated;
 			callbacks.onChannelTerminated = options.onChannelTerminated;
 			callbacks.onError = options.onError;
+			callbacks.onDisconnected = options.onDisconnected;
 			credentials = $.base64.encode(username + ":" + password);
 			connect();
+			heartbeatId = setInterval(heartbeat, 15000);
 		}
 	}
 
 	function shutdown() {
 		removeChannel();
 		channelId = "";
+		clearInterval(heartbeatId);
 	}
 
 	function isConnected() {
@@ -63,10 +68,12 @@ XSIEVENTS.API = (function() {
 	function connect() {
 		var xhr = new XMLHttpRequest();
 		var index = 0;
-		var url = host + "/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel";
+		var url = host
+				+ "/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel";
 		xhr.open("POST", url, true);
 		xhr.onreadystatechange = function() {
-			var chunk = xhr.responseText.substring(index, xhr.responseText.length);
+			var chunk = xhr.responseText.substring(index,
+					xhr.responseText.length);
 			index = xhr.responseText.length;
 			var tokens = chunk.split(XML_HEADER);
 			for ( var i = 0; i < tokens.length; i++) {
@@ -76,13 +83,20 @@ XSIEVENTS.API = (function() {
 			}
 		};
 		xhr.onerror = function(error) {
-			LOGGER.API.error(MODULE,"Error on ajax request: " + error.message);
+			LOGGER.API.error(MODULE, "Error on ajax request: " + error.message);
 			channelId = "";
+			clearInterval(heartbeatId);
 			callbacks.onError(error);
+		};
+		xhr.onloadend = function() {
+			channelId = "";
+			clearInterval(heartbeatId);
+			callbacks.onDisconnected();
 		};
 
 		var request = XML_HEADER;
-		request = request + "<Channel xmlns=\"http://schema.broadsoft.com/xsi\">";
+		request = request
+				+ "<Channel xmlns=\"http://schema.broadsoft.com/xsi\">";
 		request = request + "<channelSetId>" + channelSetId + "</channelSetId>";
 		request = request + "<priority>1</priority>";
 		request = request + "<weight>100</weight>";
@@ -106,6 +120,7 @@ XSIEVENTS.API = (function() {
 			callbacks.onSubscriptionTerminated(XML_HEADER + chunk);
 		} else if (chunk.indexOf("ChannelTerminatedEvent") >= 0) {
 			channelId = "";
+			clearInterval(heartbeatId);
 			callbacks.onChannelTerminated(XML_HEADER + chunk);
 		} else if (chunk.indexOf("<xsi:Event ") >= 0) {
 			callbacks.onEvent(XML_HEADER + chunk);
@@ -114,13 +129,13 @@ XSIEVENTS.API = (function() {
 
 	function heartbeat() {
 		if (isConnected()) {
-			var url = host + "/com.broadsoft.xsi-events/v2.0/channel/" + channelId + "/heartbeat";
-			send("PUT", url, null);
-			setTimeout(function() {
-				if (isConnected()) {
-					heartbeat();
-				}
-			}, 15000);
+			var url = host + "/com.broadsoft.xsi-events/v2.0/channel/"
+					+ channelId + "/heartbeat";
+			var response = send("PUT", url, null);
+			if (response != null) {
+				channelId = "";
+				clearInterval(heartbeatId);
+			}
 		}
 	}
 
@@ -133,7 +148,8 @@ XSIEVENTS.API = (function() {
 		var response = null;
 		$.ajax({
 			beforeSend : function(request) {
-				request.setRequestHeader("Authorization", "Basic " + credentials);
+				request.setRequestHeader("Authorization", "Basic "
+						+ credentials);
 			},
 			cache : false,
 			type : type,
@@ -145,40 +161,21 @@ XSIEVENTS.API = (function() {
 				response = doc;
 			},
 			error : function(xhr, status, error) {
-				LOGGER.API.error(MODULE,xhr.responseText + " " + status, error.message);
+				LOGGER.API.error(MODULE, xhr.responseText + " " + status,
+						error.message);
 				channelId = "";
-				callbacks.onError(error);
+				clearInterval(heartbeatId);
+				callbacks.onDisconnected();
 			}
 		});
 		return response;
 	}
 
-	function sendAsync(type, url, data, callback) {
-		$.ajax({
-			beforeSend : function(request) {
-				request.setRequestHeader("Authorization", "Basic " + credentials);
-			},
-			cache : false,
-			type : type,
-			url : url,
-			dataType : "xml",
-			data : data,
-			async : true,
-			success : function(doc) {
-				callback(doc);
-			},
-			error : function(xhr, status, error) {
-				LOGGER.API.error(MODULE,xhr.responseText + " " + status, error.message);
-				channelId = "";
-				callbacks.onError(error);
-			}
-		});
-	}
-
 	function addEventSubscription(targetId, event) {
 		var url = host + "/com.broadsoft.xsi-events/v2.0/user/" + username;
 		var data = XML_HEADER;
-		data = data + "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">";
+		data = data
+				+ "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">";
 		data = data + "<subscriberId>" + username + "</subscriberId>";
 		data = data + "<targetIdType>User</targetIdType>";
 		data = data + "<targetId>" + targetId + "</targetId>";
@@ -194,7 +191,8 @@ XSIEVENTS.API = (function() {
 	function sendEventResponse(eventId) {
 		var url = host + "/com.broadsoft.xsi-events/v2.0/channel/eventresponse";
 		var data = XML_HEADER;
-		data = data + "<EventResponse xmlns=\"http://schema.broadsoft.com/xsi\">";
+		data = data
+				+ "<EventResponse xmlns=\"http://schema.broadsoft.com/xsi\">";
 		data = data + "<eventID>" + eventId + "</eventID>";
 		data = data + "<statusCode>200</statusCode>";
 		data = data + "<reason>OK</reason>";
@@ -204,7 +202,8 @@ XSIEVENTS.API = (function() {
 	}
 
 	function getSubscription(subscriptionId) {
-		var url = host + "/com.broadsoft.xsi-events/v2.0/subscription/" + subscriptionId;
+		var url = host + "/com.broadsoft.xsi-events/v2.0/subscription/"
+				+ subscriptionId;
 		var response = send("GET", url, null);
 		return response;
 	}
