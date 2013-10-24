@@ -106,7 +106,8 @@ $("#destination").autocomplete({
 			});
 			response(suggestions);
 		}, params);
-	}
+	},
+	autoFocus: true
 });
 $("#destination").keyup(function(e) {
 	if (e.keyCode == 13) {
@@ -142,14 +143,6 @@ document.querySelector('#clicktodialbox').addEventListener('click', function() {
 document.querySelector('#notificationsbox').addEventListener('click', function() {
 	var notifications = $("#notificationsbox").prop("checked");
 	localStorage["notifications"] = notifications;
-	// disable text to speech if notifications are disabled
-	if (notifications) {
-		$("#texttospeechbox").removeAttr("disabled");
-	} else {
-		$("#texttospeechbox").attr('disabled', true);
-		$("#texttospeechbox").prop('checked', false);
-		localStorage["texttospeech"] = "false";
-	}
 });
 
 // Text to speech checkbox
@@ -405,19 +398,15 @@ function restoreTabs() {
 	var notifications = localStorage["notifications"];
 	if (notifications == "true") {
 		$("#notificationsbox").prop('checked', true);
-		// text to speech is child of notifications. Only enable if
-		// notifications is enabled.
-		$("#texttospeechbox").removeAttr("disabled");
-		var texttospeech = localStorage["texttospeech"];
-		if (texttospeech == "true") {
-			$("#texttospeechbox").prop('checked', true);
-		} else {
-			$("#texttospeechbox").prop('checked', false);
-		}
 	} else {
 		$("#notificationsbox").prop('checked', false);
-		$("#texttospeechbox").attr('disabled', true);
-		$("#texttospeechbox").attr('checked', false);
+	}
+	
+	var texttospeech = localStorage["texttospeech"];
+	if (texttospeech == "true") {
+		$("#texttospeechbox").prop('checked', true);
+	} else {
+		$("#texttospeechbox").prop('checked', false);
 	}
 
 	if (localStorage["callId"] == "unknown" || localStorage["callId"] == "") {
