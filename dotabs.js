@@ -154,17 +154,19 @@ document.querySelector('#texttospeechbox').addEventListener('click', function() 
 // Do Not disturb button
 document.querySelector('#dndbutton').addEventListener('click', function() {
 	var dnd = localStorage["dnd"];
-	if (dnd == "true") {
-		dnd = "false";
-	} else {
-		dnd = "true";
-	}
-	try {
-		XSIACTIONS.API.setDoNotDisturb(dnd);
-	} catch (error) {
-		if (textToSpeechEnabled() == "true") {
-			chrome.tts.speak('An error occured saving your DND settings.');
-			LOGGER.API.error(MODULE,error.message);
+	if (dnd != "unassigned"){
+		if (dnd == "true") {
+			dnd = "false";
+		} else {
+			dnd = "true";
+		}
+		try {
+			XSIACTIONS.API.setDoNotDisturb(dnd);
+		} catch (error) {
+			if (textToSpeechEnabled() == "true") {
+				chrome.tts.speak('An error occured saving your DND settings.');
+				LOGGER.API.error(MODULE,error.message);
+			}
 		}
 	}
 });
@@ -172,34 +174,38 @@ document.querySelector('#dndbutton').addEventListener('click', function() {
 // CFA button
 document.querySelector('#cfabutton').addEventListener('click', function() {
 	var cfa = localStorage["cfa"];
-	if (cfa == "true") {
-		cfa = "false";
-	} else {
-		cfa = "true";
-	}
-	try {
-		XSIACTIONS.API.setCallForwardAlways(cfa);
-	} catch (error) {
-		if (textToSpeechEnabled() == "true") {
-			chrome.tts.speak('An error occured saving your Call Forwarding Always settings.');
-			LOGGER.API.error(MODULE,error.message);
+	if (cfa !="unassigned"){
+		if (cfa == "true") {
+			cfa = "false";
+		} else {
+			cfa = "true";
+		}
+		try {
+			XSIACTIONS.API.setCallForwardAlways(cfa);
+		} catch (error) {
+			if (textToSpeechEnabled() == "true") {
+				chrome.tts.speak('An error occured saving your Call Forwarding Always settings.');
+				LOGGER.API.error(MODULE,error.message);
+			}
 		}
 	}
 });
 // Remote Office button
 document.querySelector('#robutton').addEventListener('click', function() {
 	var ro = localStorage["ro"];
-	if (ro == "true") {
-		ro = "false";
-	} else {
-		ro = "true";
-	}
-	try {
-		XSIACTIONS.API.setRemoteOffice(ro);
-	} catch (error) {
-		if (textToSpeechEnabled() == "true") {
-			chrome.tts.speak('An error occured saving your Remote Office settings.');
-			LOGGER.API.error(MODULE,error.message);
+	if (ro != "unassigned"){
+		if (ro == "true") {
+			ro = "false";
+		} else {
+			ro = "true";
+		}
+		try {
+			XSIACTIONS.API.setRemoteOffice(ro);
+		} catch (error) {
+			if (textToSpeechEnabled() == "true") {
+				chrome.tts.speak('An error occured saving your Remote Office settings.');
+				LOGGER.API.error(MODULE,error.message);
+			}
 		}
 	}
 });
@@ -229,7 +235,6 @@ function signout() {
 	localStorage["clicktodial"] = "";
 	localStorage["notifications"] = "";
 	localStorage["texttospeech"] = "";
-	localStorage["dnd"] = "";
 	localStorage["currentTab"] = "";
 	localStorage["connectionStatus"] = "signedOut";
 	$("#url").val("");

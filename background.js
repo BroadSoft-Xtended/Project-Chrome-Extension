@@ -33,9 +33,15 @@ var xsievents_options = {
 		// appropriate values once the initial events arrive
 		setServiceStatesToUnknown();
 		XSIEVENTS.API.addEventSubscription(username, "Standard Call");
-		XSIEVENTS.API.addEventSubscription(username, "Do Not Disturb");
-		XSIEVENTS.API.addEventSubscription(username, "Remote Office");
-		XSIEVENTS.API.addEventSubscription(username, "Call Forwarding Always");
+		if (localStorage["dnd"] != "unassigned"){
+			XSIEVENTS.API.addEventSubscription(username, "Do Not Disturb");
+		}
+		if (localStorage["ro"] != "unassigned"){
+			XSIEVENTS.API.addEventSubscription(username, "Remote Office");
+		}
+		if (localStorage["cfa"] != "unassigned"){
+			XSIEVENTS.API.addEventSubscription(username, "Call Forwarding Always");
+		}
 	},
 	onEvent : onEvent,
 	onSubscriptionTerminated : function(data) {
@@ -413,9 +419,15 @@ $(window)
 function setServiceStatesToUnknown() {
 	localStorage["callId"] = "unknown";
 	localStorage["callHold"] = "unknown";
-	localStorage["dnd"] = "unknown";
-	localStorage["ro"] = "unknown";
-	localStorage["cfa"] = "unknown";
+	if (localStorage["dnd"] != "unassigned"){
+		localStorage["dnd"] = "unknown";
+	}
+	if (localStorage["ro"] != "unassigned"){
+		localStorage["ro"] = "unknown";
+	}
+	if (localStorage["cfa"] != "unassigned"){
+		localStorage["cfa"] = "unknown";
+	}
 }
 
 function onError(error) {

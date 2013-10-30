@@ -41,19 +41,45 @@ function signin() {
 		var name = XSIACTIONS.API.getName();
 		LOGGER.API.log(MODULE,"User name: " + name);
 		localStorage["name"] = name;
+		localStorage["connectionStatus"] = "signedIn";
+		
+		try{
 		var dnd = XSIACTIONS.API.getDoNotDisturb();
 		localStorage["dnd"] = dnd;
+		dndAssigned = true;
+		} catch (error) {
+			LOGGER.API.error(MODULE,error.message);
+			localStorage["dnd"] = "unassigned";
+		}
+	
+		try{
 		var cfa = XSIACTIONS.API.getCallForwardAlways();
 		localStorage["cfa"] = cfa;
+		var cfaA
+		} catch (error) {
+			LOGGER.API.error(MODULE,error.message);
+			localStorage["cfa"] = "unassigned";
+		}
+	
+		try{
 		var ro = XSIACTIONS.API.getRemoteOffice();
 		localStorage["ro"] = ro;
-		localStorage["restartRequired"] = "true";
-		localStorage["connectionStatus"] = "signedIn";
-		top.location.assign("restart.html");
+		} catch (error) {
+			LOGGER.API.error(MODULE,error.message);
+			localStorage["ro"] = "unassigned";
+		}
 	} catch (error) {
 		showMessage("Invalid credentials. Please verify the information is correct and try again.");
 		LOGGER.API.error(MODULE,error.message);
 	}
+	
+	
+	
+	if (localStorage["connectionStatus"] == "signedIn"){
+		localStorage["restartRequired"] = "true";
+		top.location.assign("restart.html");
+	}
+	
 }
 
 function showGUI(name) {
@@ -64,6 +90,7 @@ function showGUI(name) {
 }
 
 function restoreOptions() {
+
 	$("#url").focus();
 	$(document).keypress(function(event) {
 		if (event.keyCode == 13) {

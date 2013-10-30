@@ -60,7 +60,7 @@ XSIACTIONS.API = (function() {
 			},
 			error : function(xhr, status, error) {
 				LOGGER.API.error(MODULE,xhr.responseText + " " + status + " " + error.message);
-				throw "XSI Error";
+				throw "XSI Error status: " + status;
 			}
 		});
 		if (response) {
