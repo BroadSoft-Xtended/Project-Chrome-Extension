@@ -25,8 +25,7 @@ chrome.runtime.sendMessage(message, function(response) {
 		var re = new RegExp();
 		re.compile("(" + us + "|" + international + ")");
 		var treeWalker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT, function(node) {
-			var matches = node.textContent.match(re);
-			if (matches) {
+			if (node.parentNode.tagName != 'TEXTAREA' && node.textContent.match(re)) {
 				return NodeFilter.FILTER_ACCEPT;
 			} else {
 				return NodeFilter.FILTER_SKIP;
