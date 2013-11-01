@@ -32,7 +32,7 @@
       "css" : [ "injected.css", "jquery-ui.css" ]
     }
   ],
-  "permissions": [ "notifications", "tabs", "http://*/*", "https://*/*", "tts" ],
+  "permissions": [ "notifications", "tabs", "http://*/*", "https://*/*", "tts" ,"identity"],
   "oauth2": {
     "client_id": "943920862649-69lpkph1picvbn3t9669uh609rnviri9.apps.googleusercontent.com",
     "scopes": [

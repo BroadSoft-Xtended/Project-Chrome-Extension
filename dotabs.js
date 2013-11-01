@@ -16,20 +16,6 @@ limitations under the License.
 
 var MODULE = "dotabs.js";
  
-// Google OAuth stuff for contacts API
-var oauth = ChromeExOAuth.initBackgroundPage({
-	'request_url' : 'https://www.google.com/accounts/OAuthGetRequestToken',
-	'authorize_url' : 'https://www.google.com/accounts/OAuthAuthorizeToken',
-	'access_url' : 'https://www.google.com/accounts/OAuthGetAccessToken',
-	'consumer_key' : 'anonymous',
-	'consumer_secret' : 'anonymous',
-	'scope' : 'http://www.google.com/m8/feeds/',
-	'app_name' : 'BroadSoft Xtended Dialer for Google Chrome'
-});
-
-oauth.authorize(function() {
-});
-
 // retrieve stored name
 $("#name").text(localStorage["name"]);
 
@@ -81,31 +67,24 @@ $("#destination").autocomplete({
 			}
 		});
 
-		var url = "https://www.google.com/m8/feeds/contacts/default/full";
-		var params = {
-			"parameters" : {
-				"v" : "3.0",
-				"q" : request.term,
-				"max-results" : 50
-			}
-		};
-		oauth.sendSignedRequest(url, function(text, xhr) {
-			$(text).find("entry").each(function() {
+		var url = "https://www.google.com/m8/feeds/contacts/default/full?v=3.0&max-results=50&q=" + request.term;
+		authenticatedXhr('GET', url, function(error, status, response) {
+			console.log(error);
+			console.log(status);
+			//console.log(response);
+			$(response).find("entry").each(function() {
 				var title = $(this).find("title").text();
 				if (title == "") {
 					title = "Unknown";
 				}
 				$(this).find("gd\\:phoneNumber").each(function() {
-					var number = $(this).text();
-					var type = $(this).attr("rel").replace("http://schemas.google.com/g/2005#", "");
-					suggestions.push({
-						value : number,
-						label : title + " (" + type + ": " + number + ")"
-					});
-				});
+						var number = $(this).text();
+						var type = $(this).attr("rel").replace("http://schemas.google.com/g/2005#","");
+						suggestions.push({value : number,label : title + " (" + type + ": " + number + ")"});						
+						});
 			});
-			response(suggestions);
-		}, params);
+		});
+		response(suggestions);
 	},
 	autoFocus: true
 });
@@ -210,19 +189,6 @@ document.querySelector('#robutton').addEventListener('click', function() {
 	}
 });
 
-// hangup button
-document.querySelector('#hangupbutton').addEventListener("click", function() {
-	XSIACTIONS.API.hangup(localStorage["callId"]);
-});
-
-// hold button
-document.querySelector('#holdbutton').addEventListener("click", function() {
-	if (localStorage["callHold"] == "true") {
-		XSIACTIONS.API.talk(localStorage["callId"]);
-	} else {
-		XSIACTIONS.API.hold(localStorage["callId"]);
-	}
-});
 
 function signout() {
 	localStorage["url"] = "";
@@ -383,16 +349,6 @@ function restoreTabs() {
 	setButtonState("ro", localStorage["ro"]);
 	setButtonState("cfa", localStorage["cfa"]);
 
-	// restore call control button states
-	if (localStorage["callId"] == "unknown" || localStorage["callId"] == "") {
-		$("#hangupbutton").hide();
-		$("#holdbutton").hide();
-	} else {
-		$("#hangupbutton").show();
-		$("#holdbutton").show();
-		setButtonState("hold", localStorage["callHold"]);
-	}
-
 	var clicktodial = localStorage["clicktodial"];
 	if (clicktodial == "true") {
 		$("#clicktodialbox").prop('checked', true);
@@ -414,38 +370,13 @@ function restoreTabs() {
 		$("#texttospeechbox").prop('checked', false);
 	}
 
-	if (localStorage["callId"] == "unknown" || localStorage["callId"] == "") {
-		$("#hangupbutton").hide();
-		$("#holdbutton").hide();
-	} else {
-		$("#hangupbutton").show();
-		$("#holdbutton").show();
-	}
 
 	$(window).bind("storage", function(e) {
 		LOGGER.API.log(MODULE,"Event received with key: " + e.originalEvent.key);
 		if (e.originalEvent.key == "dnd" || e.originalEvent.key == "ro" || e.originalEvent.key == "cfa") {
 			setButtonState(e.originalEvent.key, localStorage[e.originalEvent.key]);
 			announceServiceState(e.originalEvent.key, e.originalEvent.newValue);
-		} else if (e.originalEvent.key == "callId") {
-			if (e.originalEvent.newValue == "unknown" || e.originalEvent.newValue == "") {
-				$("#hangupbutton").hide();
-				$("#holdbutton").hide();
-			} else {
-				$("#hangupbutton").show();
-				$("#holdbutton").show();
-			}
-		} else if (e.originalEvent.key == "callHold") {
-			if (e.originalEvent.newValue == "true") {
-				$("#holdbutton").attr("src", "images/hold_active.png");
-				$("#holdbutton").css("background-color", "#F7A300");
-				$("#holdbutton").attr("title", "Unhold");
-			} else {
-				$("#holdbutton").attr("src", "images/hold_normal.png");
-				$("#holdbutton").css("background-color", "transparent");
-				$("#holdbutton").attr("title", "Hold");
-			}
-		}
+		} 
 	});
 }
 

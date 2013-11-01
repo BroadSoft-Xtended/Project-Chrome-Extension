@@ -55,7 +55,6 @@ function signin() {
 		try{
 		var cfa = XSIACTIONS.API.getCallForwardAlways();
 		localStorage["cfa"] = cfa;
-		var cfaA
 		} catch (error) {
 			LOGGER.API.error(MODULE,error.message);
 			localStorage["cfa"] = "unassigned";
