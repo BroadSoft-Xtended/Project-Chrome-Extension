@@ -254,7 +254,7 @@ function contentLoaded() {
 									}
 									if (localStorage["texttospeech"] == "true") {
 											number = call.number.replace("+"+ call.countryCode + "-","").replace(/([0-9])/g,"$1 ");
-											chrome.tts.speak("Call from "+ name+ " "+ number,{"lang" : "en-US"});
+											chrome.tts.speak("Call from "+ call.name+ " "+ number,{"lang" : "en-US"});
 									}
 								}
 							}
