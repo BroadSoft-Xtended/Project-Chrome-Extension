@@ -107,7 +107,7 @@ $("#destination").keyup(function(e) {
 });
 
 // signout
-document.querySelector('#signout').addEventListener('click', signout);
+document.querySelector('#signout').addEventListener('click', function(){signout(true);});
 
 // about
 document.querySelector('#about_link_tabs').addEventListener('click', showAboutBox);
@@ -189,24 +189,24 @@ document.querySelector('#robutton').addEventListener('click', function() {
 	}
 });
 
-
-function signout() {
-	localStorage["url"] = "";
-	localStorage["username"] = "";
+// Signout.  A manual signout means the user signed out themselves. In this case, clear out all info. If a force logout
+// due to an authentication error or some other error, then retain some information.
+function signout(manual) {
 	localStorage["password"] = "";
 	localStorage["name"] = "";
 	localStorage["cfa"] = "";
 	localStorage["ro"] = "";
 	localStorage["dnd"] = "";
-	localStorage["clicktodial"] = "";
-	localStorage["notifications"] = "";
-	localStorage["texttospeech"] = "";
 	localStorage["currentTab"] = "";
 	localStorage["connectionStatus"] = "signedOut";
-	$("#url").val("");
-	$("#username").val("");
-	$("#password").val("");
-	$("#status").text("");
+	if (manual){
+		localStorage["url"] = "";
+		localStorage["username"] = "";
+		localStorage["clicktodial"] = "";
+		localStorage["notifications"] = "";
+		localStorage["texttospeech"] = "";
+		localStorage["errorMessage"] = "";
+	}
 	top.location.assign("options.html");
 }
 
@@ -278,6 +278,21 @@ function restoreTabs() {
 		password : localStorage["password"],
 	};
 	XSIACTIONS.API.init(xsiactions_options);
+	
+	try {
+			var name = XSIACTIONS.API.getName();
+			localStorage["name"] = name;
+	} catch (error) {
+			LOGGER.API.error(MODULE,error.message);
+			if (error.message.indexOf("401") != -1 || error.message.indexOf("403") != -1){
+				localStorage["errorMessage"] = "An authentication error occurred. Please login again.";
+			}
+			else{
+				localStorage["errorMessage"] = "An error occurred. Please login again.";
+			}
+			signout(false);
+			return;
+	}
 
 	// create tabs
 	$("#tabs").tabs();
@@ -376,7 +391,10 @@ function restoreTabs() {
 		if (e.originalEvent.key == "dnd" || e.originalEvent.key == "ro" || e.originalEvent.key == "cfa") {
 			setButtonState(e.originalEvent.key, localStorage[e.originalEvent.key]);
 			announceServiceState(e.originalEvent.key, e.originalEvent.newValue);
-		} 
+		}
+		else if (e.originalEvent.key == "errorMessage"){
+				signout(false);
+		}
 	});
 }
 

@@ -36,7 +36,7 @@
   "oauth2": {
     "client_id": "943920862649-69lpkph1picvbn3t9669uh609rnviri9.apps.googleusercontent.com",
     "scopes": [
-      "http://www.google.com/m8/feeds/"
+      "https://www.google.com/m8/feeds/"
     ]
   },  
   "icons": {

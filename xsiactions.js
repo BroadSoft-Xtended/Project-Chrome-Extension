@@ -58,9 +58,9 @@ XSIACTIONS.API = (function() {
 			success : function(doc) {
 				response = doc;
 			},
-			error : function(xhr, status, error) {
-				LOGGER.API.error(MODULE,xhr.responseText + " " + status + " " + error.message);
-				throw "XSI Error status: " + status;
+			error : function(xhr, error) {
+				LOGGER.API.error(MODULE,xhr.responseText + " " + xhr.status + " " + error.message);
+				throw new Error("XSI Error status: " + xhr.status);
 			}
 		});
 		if (response) {

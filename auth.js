@@ -41,7 +41,7 @@ function authenticatedXhr(method, url, callback) {
 					}, getTokenAndXhr);
 					return;
 				}
-
+				console.log(this);
 				callback(null, this.status, this.responseText);
 			};
 

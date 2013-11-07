@@ -119,7 +119,7 @@ $(window)
 											"User has signed out. Terminating XSIEVENTS Framework");
 							xsiEvents.terminate();
 						} 
-					}
+					}					
 				});
 
 function setServiceStatesToUnknown() {
@@ -199,7 +199,7 @@ function contentLoaded() {
 									retryAttempt = 0;
 								}
 								var wait = (Math.pow(2, retryAttempt) * 5000)
-										+ Math.floor(Math.random() * 11);
+										+ Math.floor(Math.random() * 11) * 1000;
 								console.log('waiting for ' + wait
 										+ 's before re-connect');
 								setTimeout(function() {
@@ -207,13 +207,10 @@ function contentLoaded() {
 									sendStartMessage();
 								}, wait);
 							} else {
-								// TODO: display an error message asking the
-								// user to enter
-								// correct credentials
-								console
-										.log("*** DISCONNECTED DUE TO AUTHORIZATION FAILURE ***");
-								console
-										.log("*** Will not try to reconnect to protect from account lockout ***");
+								console.log("*** DISCONNECTED DUE TO AUTHORIZATION FAILURE ***");
+								console.log("*** Will not try to reconnect to protect from account lockout ***");
+								localStorage["errorMessage"] = "An authentication error occurred. Please login again.";
+								localStorage["connectionStatus"] = "signedOut";
 							}
 							setServiceStatesToUnknown();
 							break;

@@ -76,6 +76,7 @@ function signin() {
 	
 	if (localStorage["connectionStatus"] == "signedIn"){
 		localStorage["restartRequired"] = "true";
+		localStorage["errorMessage"]="";
 		top.location.assign("restart.html");
 	}
 	
@@ -97,7 +98,15 @@ function restoreOptions() {
 		}
 	});
 
-	if (localStorage["restartRequired"] == "true") {
+	var error = localStorage["errorMessage"];
+	if (localStorage["errorMessage"] != undefined && localStorage["errorMessage"] != ""){
+		showMessage(error);
+		$("#url").val(localStorage["url"]);
+		$("#username").val(localStorage["username"]);
+		$("#password").val("");
+		localStorage["connectionStatus"] = "signedOut";
+	}
+	else if (localStorage["restartRequired"] == "true") {
 		top.location.assign("restart.html");
 	} else {
 		var url = localStorage["url"];
