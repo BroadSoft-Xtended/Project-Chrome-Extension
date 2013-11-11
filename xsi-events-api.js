@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
  */
 
+importScripts('tinyxmlw3cdom.js','tinyxmlsax.js');
 var LOG_PREFIX = 'xsi-events-api|';
 var XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 var HEARTBEAT_INTERVAL = 15000;
@@ -27,6 +28,7 @@ var applicationId = 'broadworks4chrome';
 var hosts = [];
 var credentials = '';
 var username = '';
+var parser = new DOMImplementation();
 
 self.addEventListener('message', function(e) {
 	switch (e.data.cmd) {
@@ -98,8 +100,10 @@ function connect() {
 
 function process(chunk) {
 	log('received data: ' + chunk);
+    var xmlDoc = parser.loadXML(chunk).getDocumentElement();
+
 	if (chunk.indexOf('<Channel ') >= 0) {
-		channelId = getTagValue('channelId', chunk);
+		channelId = xmlDoc.getElementsByTagName('channelId').item(0).getFirstChild().getNodeValue();
 		log('channelId: ' + channelId);
 		heartbeatIntervalId = setInterval(heartbeat, HEARTBEAT_INTERVAL);
 		status = 'connected';
@@ -115,15 +119,17 @@ function process(chunk) {
 		// nothing to do here, mainXhr will return after this and the disconnect
 		// message will be sent to background page
 	} else if (chunk.indexOf('<xsi:Event ') >= 0) {
-		var eventId = getTagValue('xsi:eventID', chunk);
+		var eventId = xmlDoc.getElementsByTagName('xsi:eventID').item(0).getFirstChild().getNodeValue();
 		sendEventResponse(eventId);
-		var eventType = getEventType(chunk);
+		var eventType = xmlDoc.getElementsByTagName('xsi:eventData').item(0).getAttribute('xsi1:type').trim();
+		eventType = eventType.substring(4);//string off the prefix "xsi:" from the eventType
 		log('eventType: ' + eventType);
 		switch (eventType) {
 		case 'DoNotDisturbEvent':
 		case 'CallForwardingAlwaysEvent':
 		case 'RemoteOfficeEvent':
-			var active = getTagValue('xsi:active', chunk);
+			var active = xmlDoc.getElementsByTagName('xsi:active').item(0).getFirstChild().getNodeValue();
+			log('active: ' + active);
 			sendMessage(eventType, active);
 			break;
 		case 'CallSubscriptionEvent':
@@ -205,51 +211,33 @@ function log(message) {
 	sendMessage('log', LOG_PREFIX + timestamp + '|' + message);
 }
 
-function getTagValue(tag, data) {
-	var ret = '';
-	var i = data.indexOf('<' + tag + '>');
-	var j = data.indexOf('</' + tag + '>');
-	if (i != -1 && j != -1 && i < j) {
-		ret = data.substring(i + tag.length + 2, j);
-	}
-	return ret;
-}
-
-function getAttrValue(attr, data) {
-	var ret = '';
-	var i = data.indexOf(attr);
-	if (i != -1){
-		j = data.indexOf('"',i + attr.length +2);
-		ret = data.substring(i + attr.length + 2, j);
-	}
-	return ret;
-}
-
-function getEventType(xml) {
-	var type = '';
-	var i = xml.indexOf('<xsi:eventData xsi1:type="');
-	if (i != -1) {
-		var j = xml.indexOf('"', i + 26);
-		if (j > i) {
-			type = xml.substring(i + 26, j);
-			type = type.replace('xsi:', '');
-		}
-	}
-	return type;
-}
 
 function parseCalls(xml) {
 	var calls = new Array();
-	var call = getTagValue('xsi:call', xml);
-	while (call != '') {
-		var callId = getTagValue('xsi:callId', call);
-		var personality = getTagValue('xsi:personality', call);
-		var state = getTagValue('xsi:state', call);
-		var remoteParty = getTagValue('xsi:remoteParty', call);
-		var name = getTagValue('xsi:name', remoteParty);
-		var number = getTagValue('xsi:address', remoteParty);
-		var countryCode = getAttrValue('countryCode',remoteParty);
-		number = number.replace("tel:","").replace("+"+ countryCode,"+"+ countryCode+ "-");		
+    var xmlDoc = parser.loadXML(xml).getDocumentElement();
+
+	var callNodes = xmlDoc.getElementsByTagName('xsi:call');
+	for (i=0;i < callNodes.length;i++){
+		var call = callNodes.item(i);
+		var callId = call.getElementsByTagName('xsi:callId').item(0).getFirstChild().getNodeValue();
+		var personality = call.getElementsByTagName('xsi:personality').item(0).getFirstChild().getNodeValue();;
+		var state = call.getElementsByTagName('xsi:state').item(0).getFirstChild().getNodeValue();;
+		var remotePartyElement = call.getElementsByTagName('xsi:remoteParty').item(0);
+		var nameElement = remotePartyElement.getElementsByTagName('xsi:name').item(0);
+		var name = "";
+		if (nameElement != null){
+			name = nameElement.getFirstChild().getNodeValue();
+		}
+		var address = "";
+		var addressElement = remotePartyElement.getElementsByTagName('xsi:address').item(0);
+		var address  = addressElement.getFirstChild().getNodeValue();
+		var countryCode = "";
+		if (addressElement.hasAttributes()){
+			countryCode = addressElement.getAttribute('countryCode');
+			log("countryCode: " + countryCode);
+
+		}
+		number = address.replace("tel:","").replace("+"+ countryCode,"+"+ countryCode+ "-");		
 		calls[callId] = {
 			personality : personality,
 			state : state,
@@ -257,8 +245,6 @@ function parseCalls(xml) {
 			number : number,
 			countryCode: countryCode
 		};
-		xml = xml.substring(xml.indexOf('</xsi:call>') + 11);
-		call = getTagValue('xsi:call', xml);
 	}
 	return calls;
 }

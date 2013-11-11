@@ -46,7 +46,7 @@ $("#calllogentries").on("dblclick", "tr", function(e) {
 // dialer
 $("#destination").autocomplete({
 	minLength : 2,
-	source : function(request, response) {
+	source : function(request, responseCallback) {
 		var suggestions = [];
 		var contacts = XSIACTIONS.API.searchEnterpriseDirectory(request.term);
 		$(contacts).find("directoryDetails").each(function() {
@@ -69,9 +69,6 @@ $("#destination").autocomplete({
 
 		var url = "https://www.google.com/m8/feeds/contacts/default/full?v=3.0&max-results=50&q=" + request.term;
 		authenticatedXhr('GET', url, function(error, status, response) {
-			console.log(error);
-			console.log(status);
-			//console.log(response);
 			$(response).find("entry").each(function() {
 				var title = $(this).find("title").text();
 				if (title == "") {
@@ -80,11 +77,12 @@ $("#destination").autocomplete({
 				$(this).find("gd\\:phoneNumber").each(function() {
 						var number = $(this).text();
 						var type = $(this).attr("rel").replace("http://schemas.google.com/g/2005#","");
-						suggestions.push({value : number,label : title + " (" + type + ": " + number + ")"});						
+						suggestions.push({value : number,label : title + " (" + type + ": " + number + ")"});
 						});
 			});
+			console.log(suggestions);
+			responseCallback(suggestions);
 		});
-		response(suggestions);
 	},
 	autoFocus: true
 });
