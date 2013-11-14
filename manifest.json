@@ -1,6 +1,7 @@
 {
   "name" : "BroadSoft Xtended Dialer for Google Chrome™",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlOmQuY/oO0K9uZ3I7lnFjdOoKiRHz/qDeUOZxz+S7JN3SjdZox/g499SSh5cWkXJGdSWV6jS7kcINKPHOVhkwAgPTzYhbRYNF3uRaP6w+fsW4tQ8/mpMc6NgZe2E6a9xNt5Y7ipGFq2UfSIUlxgErSuTqbAM5pMSaelk0mX268Hbn0Pl5/CjEJ37SkIafIwsApiRubEg3/7+qRsGlWDxruCZBtYZ8prI5mMaN5pgnc8uICumEwGrK2ZjId9+GtxH8KZLo5WhubaHUXjGpzhZ0mdigdkmz+HgDjrg5MIDt9q/Ej0J/Bcnie7VZ0w7yU2iCYPEjy3s+nV9SZbtHJMhMwIDAQAB",  
+  // See http://developer.chrome.com/extensions/app_identity.html to get your own key and IDs"
+  //"key": "<enter key>",  
   "short_name": "Xtended Dialer",
   "version" : "1.2",
   "description" : "A Google Chrome™ extension that provides BroadWorks telephony integration.",
@@ -34,7 +35,8 @@
   ],
   "permissions": [ "notifications", "tabs", "http://*/*", "https://*/*", "tts" ,"identity"],
   "oauth2": {
-    "client_id": "943920862649-69lpkph1picvbn3t9669uh609rnviri9.apps.googleusercontent.com",
+    // See http://developer.chrome.com/extensions/app_identity.html to get your own client ID"
+	"client_id": "anonymous",
     "scopes": [
       "https://www.google.com/m8/feeds/"
     ]

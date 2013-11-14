@@ -81,12 +81,12 @@ function onChange(text, suggest) {
 							suggestions.push({content : number,description : title+ " ("+ type + ": " + number + ")"});
 							});
 				});
-				suggest(suggestions);
 			}
 			else{
-				console.log(error);
+				LOGGER.API.error(MODULE, error);
 			}
 		});
+		suggest(suggestions);
 	}
 }
 
