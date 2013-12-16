@@ -29,6 +29,14 @@ var hosts = [];
 var credentials = '';
 var username = '';
 var parser = new DOMImplementation();
+var EVENT_CLOSE = '</xsi:Event>';
+var CHANNEL_CLOSE = '</Channel>';
+var HEARTBEAT_CLOSE = '<ChannelHeartBeat xmlns="http://schema.broadsoft.com/xsi"/>'; 
+
+// define endsWith method for String
+String.prototype.endsWith = function(suffix) {
+	return this.indexOf(suffix, this.length - suffix.length) !== -1;
+};
 
 self.addEventListener('message', function(e) {
 	switch (e.data.cmd) {
@@ -62,18 +70,37 @@ function connect() {
 	}
 	mainXhr = new XMLHttpRequest();
 	var index = 0;
+	var responseBuffer = '';
 	var url = hosts[hostIndex]
 			+ '/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel';
 	mainXhr.open('POST', url, true);
 	mainXhr.onreadystatechange = function() {
-		var chunk = mainXhr.responseText.substring(index,
-				mainXhr.responseText.length);
+		var chunk = mainXhr.responseText.substring(index,mainXhr.responseText.length);
 		index = mainXhr.responseText.length;
-		var tokens = chunk.split(XML_HEADER);
-		for ( var i = 0; i < tokens.length; i++) {
-			if (tokens[i] != '') {
-				process(tokens[i]);
+		log("Chunk is: " + chunk); 
+		// Ensure there is at least one complete Channel Response, Event Response, or Heartbeat response in the responseText. Sometimes,
+		// responses are split across chunks
+		if (chunk.endsWith(EVENT_CLOSE) || chunk.endsWith(CHANNEL_CLOSE) || chunk.endsWith(HEARTBEAT_CLOSE)){
+			// If anything is in the response buffer then add chunk to the buffer, set as response, and then clear the buffer
+			if (responseBuffer != ''){
+				responseBuffer += chunk;
+				response = responseBuffer;
+				responseBuffer = '';
 			}
+			else{
+				response = chunk;
+			}
+			log("complete response is: " + response);
+			var tokens = response.split(XML_HEADER);
+			for ( var i = 0; i < tokens.length; i++) {
+				if (tokens[i] != '') {
+					process(tokens[i]);
+				}
+			}
+		}
+		// If no complete response then add the chunk to the buffer
+		else{
+				responseBuffer += chunk;
 		}
 	};
 	mainXhr.onloadend = function() {
@@ -276,3 +303,4 @@ function sendEventResponse(eventId) {
 	data = data + "</EventResponse>";
 	send("POST", url, data);
 }
+
