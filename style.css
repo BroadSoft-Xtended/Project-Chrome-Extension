@@ -219,13 +219,12 @@ ul.ui-autocomplete {
 	height: 17px;
 }
 
-
 #signout a {
 	color: #333333;
 	outline: none;
 	position: absolute;
 	top: 1px;
-	right: 2px;	
+	right: 2px;
 }
 
 #signin:hover {
@@ -240,10 +239,7 @@ ul.ui-autocomplete {
 
 #dialer {
 	font-size: 8pt;
-	margin: 2px;
-	position: absolute;
-	left: 10px;
-	bottom: 120px;
+	margin: 0 auto;
 }
 
 #history {
@@ -259,6 +255,7 @@ ul.ui-autocomplete {
 #tabs {
 	height: 90%;
 	border-color: #F7A300;
+	margin: 0 auto;
 }
 
 #tabs li {
@@ -328,7 +325,8 @@ ul.ui-autocomplete {
 
 #destination {
 	width: 240px;
-	margin-top: 20px;
+	margin-top: 10px;
+	margin-bottom: 10px;
 }
 
 #calllogs {
@@ -369,17 +367,46 @@ ul.ui-autocomplete {
 	left: 13px;
 }
 
-#hangupbutton {
-	position: absolute;
-	bottom: 15px;
-	left: 237px;
-	cursor: pointer;
-	background-color: #FF0000;
+#calls {
+	margin: 0 auto;
+	border-collapse: collapse;
 }
 
-#holdbutton {
-	position: absolute;
-	bottom: 15px;
-	left: 257px;
-	cursor: pointer;
+#calls tr {
+	border-top: 1px solid #CCCCCC;
+	border-bottom: 1px solid #CCCCCC;
+}
+
+#calls tr td {
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
+#calls tr td:first-child {
+	width: 196px;
+	text-align: left;
+}
+
+#calls tr td:first-child+td {
+	width: 24px;
+	text-align: right;
+}
+
+#calls tr td:first-child+td+td {
+	width: 24px;
+	text-align: right;
+}
+
+#calls tr td img {
+	padding: 1px;
+	vertical-align: middle;
+}
+
+.nameAndNumber {
+	font-size: 10px;
+	font-weight: bold;
+}
+
+#callDuration {
+	font-size: 8px;
 }

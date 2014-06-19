@@ -13,14 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var subscriptions = {};
 var storageUrl = localStorage["url"];
 var storageUsername = localStorage["username"];
 var storagePassword = localStorage["password"];
 var MODULE = "background.js";
 var retryAttempt = 0;
 var xsiEvents;
-
 
 function onMessage(request, sender, sendResponse) {
 	var type = request.type;
@@ -67,25 +65,52 @@ function onChange(text, suggest) {
 					}
 				});
 
-		var url = "https://www.google.com/m8/feeds/contacts/default/full?v=3.0&max-results=20&q=" + text;
-		authenticatedXhr('GET', url, function(error, status, response) {
-			if (error == null){
-				$(response).find("entry").each(function() {
-					var title = $(this).find("title").text();
-					if (title == "") {
-						title = "Unknown";
+		var url = "https://www.google.com/m8/feeds/contacts/default/full?v=3.0&max-results=20&q="
+				+ text;
+		authenticatedXhr(
+				'GET',
+				url,
+				function(error, status, response) {
+					if (error == null) {
+						$(response)
+								.find("entry")
+								.each(
+										function() {
+											var title = $(this).find("title")
+													.text();
+											if (title == "") {
+												title = "Unknown";
+											}
+											$(this)
+													.find("gd\\:phoneNumber")
+													.each(
+															function() {
+																var number = $(
+																		this)
+																		.text();
+																var type = $(
+																		this)
+																		.attr(
+																				"rel")
+																		.replace(
+																				"http://schemas.google.com/g/2005#",
+																				"");
+																suggestions
+																		.push({
+																			content : number,
+																			description : title
+																					+ " ("
+																					+ type
+																					+ ": "
+																					+ number
+																					+ ")"
+																		});
+															});
+										});
+					} else {
+						LOGGER.API.error(MODULE, error);
 					}
-					$(this).find("gd\\:phoneNumber").each(function() {
-							var number = $(this).text();
-							var type = $(this).attr("rel").replace("http://schemas.google.com/g/2005#","");
-							suggestions.push({content : number,description : title+ " ("+ type + ": " + number + ")"});
-							});
 				});
-			}
-			else{
-				LOGGER.API.error(MODULE, error);
-			}
-		});
 		suggest(suggestions);
 	}
 }
@@ -98,8 +123,7 @@ function onEntered(text) {
 	} catch (error) {
 		LOGGER.API.error(MODULE, "onEntered error: " + error.message);
 	}
-}										
-									
+}
 
 // list to local storage changes. Jquery allows multiple handlers.
 $(window)
@@ -118,22 +142,21 @@ $(window)
 									.log(MODULE,
 											"User has signed out. Terminating XSIEVENTS Framework");
 							xsiEvents.terminate();
-						} 
-					}					
+						}
+					}
 				});
 
 function setServiceStatesToUnknown() {
-	if (localStorage["dnd"] != "unassigned"){
+	if (localStorage["dnd"] != "unassigned") {
 		localStorage["dnd"] = "unknown";
 	}
-	if (localStorage["ro"] != "unassigned"){
+	if (localStorage["ro"] != "unassigned") {
 		localStorage["ro"] = "unknown";
 	}
-	if (localStorage["cfa"] != "unassigned"){
+	if (localStorage["cfa"] != "unassigned") {
 		localStorage["cfa"] = "unknown";
 	}
 }
-
 
 function connectXsiEvents() {
 	// init the worker, hosts contains all the XSP hosts
@@ -142,8 +165,8 @@ function connectXsiEvents() {
 		cmd : 'init',
 		config : {
 			hosts : [ storageUrl ],
-			username: storageUsername,
-			credentials: creds
+			username : storageUsername,
+			credentials : creds
 		}
 	});
 
@@ -159,7 +182,7 @@ function contentLoaded() {
 		password : localStorage["password"],
 	};
 	XSIACTIONS.API.init(xsiactions_options);
-	
+
 	chrome.omnibox.onInputChanged.addListener(onChange);
 	chrome.omnibox.onInputEntered.addListener(onEntered);
 	chrome.extension.onMessage.addListener(onMessage);
@@ -176,7 +199,7 @@ function contentLoaded() {
 			}
 		}
 	});
-	
+
 	// add suspend listener
 	chrome.runtime.onSuspend.addListener(function() {
 		xsiEvents.terminate();
@@ -200,15 +223,19 @@ function contentLoaded() {
 								}
 								var wait = (Math.pow(2, retryAttempt) * 5000)
 										+ Math.floor(Math.random() * 11) * 1000;
-								console.log('waiting for ' + wait
+								LOGGER.API.log(MODULE, 'waiting for ' + wait
 										+ 's before re-connect');
 								setTimeout(function() {
 									retryAttempt++;
 									sendStartMessage();
 								}, wait);
 							} else {
-								console.log("*** DISCONNECTED DUE TO AUTHORIZATION FAILURE ***");
-								console.log("*** Will not try to reconnect to protect from account lockout ***");
+								LOGGER.API
+										.log(MODULE,
+												"*** DISCONNECTED DUE TO AUTHORIZATION FAILURE ***");
+								LOGGER.API
+										.log(MODULE,
+												"*** Will not try to reconnect to protect from account lockout ***");
 								localStorage["errorMessage"] = "An authentication error occurred. Please login again.";
 								localStorage["connectionStatus"] = "signedOut";
 							}
@@ -222,74 +249,90 @@ function contentLoaded() {
 							break;
 						case 'RemoteOfficeEvent':
 							localStorage["ro"] = e.data.value;
-							break;						
-						case 'CallSubscriptionEvent':
-							for (var callId in e.data.value){
-								var call = e.data.value[callId];
-								//TODO
-							}
 							break;
-						case 'CallOriginatedEvent':
-							for (var callId in e.data.value){
-								//TODO
-							}
+						case 'CallSubscriptionEvent':
+							localStorage["calls"] = JSON
+									.stringify(e.data.value);
 							break;
 						case 'CallReceivedEvent':
-							for (var callId in e.data.value){
-								var call = e.data.value[callId];						
-								if (call.state == "Alerting"){
-									if (localStorage["notifications"] == "true") {	
+							var lCalls = JSON.parse(localStorage["calls"]);
+							for ( var callId in e.data.value) {
+								var call = e.data.value[callId];
+								lCalls[callId] = call;
+								if (call.state == "Alerting") {
+									if (localStorage["notifications"] == "true") {
 										var opts = {
-										type : "basic",
-										title : "Incoming Call",
-										message : "Call from "+ call.name + " "+ call.number,
-										iconUrl : "images/bsft_logo_128x128.png",
-										buttons : [	{title : "Answer"},
-													{title : "Decline"} ]
+											type : "basic",
+											title : "Incoming Call",
+											message : "Call from " + call.name
+													+ " " + call.number,
+											iconUrl : "images/bsft_logo_128x128.png",
+											buttons : [ {
+												title : "Answer"
+											}, {
+												title : "Decline"
+											} ]
 										};
-									chrome.notifications.create(callId,opts,function() {});
+										chrome.notifications.create(callId,
+												opts, function() {
+												});
 									}
 									if (localStorage["texttospeech"] == "true") {
-											number = call.number.replace("+"+ call.countryCode + "-","").replace(/([0-9])/g,"$1 ");
-											chrome.tts.speak("Call from "+ call.name+ " "+ number,{"lang" : "en-US"});
+										number = call.number.replace(
+												"+" + call.countryCode + "-",
+												"").replace(/([0-9])/g, "$1 ");
+										chrome.tts.speak("Call from "
+												+ call.name + " " + number, {
+											"lang" : "en-US"
+										});
 									}
 								}
 							}
+							localStorage["calls"] = JSON.stringify(lCalls);
 							break;
 						case 'CallAnsweredEvent':
-							for (var callId in e.data.value){
+							var lCalls = JSON.parse(localStorage["calls"]);
+							for ( var callId in e.data.value) {
 								var call = e.data.value[callId];
-								chrome.notifications.clear(callId, function() {});
+								// hack to override the answer time
+								// so that the timer is accurate (ish?)
+								// even if the PC clock is not in sync
+								// with AS
+								call.answerTime = new Date().getTime();
+								lCalls[callId] = call;
+								chrome.notifications.clear(callId, function() {
+								});
 							}
-							break;							
-						case 'CallReleasedEvent':
-							for (var callId in e.data.value){
-								var call = e.data.value[callId];
-								chrome.notifications.clear(callId, function() {});
-							}
-							break;						
-						case 'CallHeldEvent':
-							for (var callId in e.data.value){
-								var call = e.data.value[callId];
-								//TODO
-							}
+							localStorage["calls"] = JSON.stringify(lCalls);
 							break;
-						case 'CallRetrievedEvent':
-							for (var callId in e.data.value){
-								var call = e.data.value[callId];
-								//TODO
+						case 'CallReleasedEvent':
+							var lCalls = JSON.parse(localStorage["calls"]);
+							for ( var callId in e.data.value) {
+								delete lCalls[callId];
+								chrome.notifications.clear(callId, function() {
+								});
 							}
-							break;						
+							localStorage["calls"] = JSON.stringify(lCalls);
+							break;
+						case 'CallOriginatingEvent':
+						case 'CallOriginatedEvent':
+						case 'CallHeldEvent':
+						case 'CallRetrievedEvent':
 						case 'CallUpdatedEvent':
-							console.log(e.data.type, e.data.value);
+							var lCalls = JSON.parse(localStorage["calls"]);
+							for ( var callId in e.data.value) {
+								var call = e.data.value[callId];
+								lCalls[callId] = call;
+							}
+							localStorage["calls"] = JSON.stringify(lCalls);
 							break;
 						case 'log':
-							console.log(e.data.value);
+							LOGGER.API.log(MODULE, e.data.value);
 							break;
 						}
 					}, false);
-					
-	if (localStorage["connectionStatus"] == "signedIn"){
+
+	if (localStorage["connectionStatus"] == "signedIn") {
 		connectXsiEvents();
 	}
 
@@ -300,6 +343,5 @@ function sendStartMessage() {
 		cmd : 'start'
 	});
 }
-
 
 document.addEventListener('DOMContentLoaded', contentLoaded);

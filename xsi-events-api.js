@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
  */
 
-importScripts('tinyxmlw3cdom.js','tinyxmlsax.js');
+importScripts('tinyxmlw3cdom.js', 'tinyxmlsax.js');
 var LOG_PREFIX = 'xsi-events-api|';
 var XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 var HEARTBEAT_INTERVAL = 15000;
+// channel and subscription expiry in seconds, don't set
+// this lower than 600
+var EXPIRES = 3600;
 var channelId = '';
 var mainXhr = null;
 var heartbeatIntervalId = null;
@@ -31,7 +34,9 @@ var username = '';
 var parser = new DOMImplementation();
 var EVENT_CLOSE = '</xsi:Event>';
 var CHANNEL_CLOSE = '</Channel>';
-var HEARTBEAT_CLOSE = '<ChannelHeartBeat xmlns="http://schema.broadsoft.com/xsi"/>'; 
+var HEARTBEAT_CLOSE = '<ChannelHeartBeat xmlns="http://schema.broadsoft.com/xsi"/>';
+var subscriptionIds = {};
+var updateIntervalId = null;
 
 // define endsWith method for String
 String.prototype.endsWith = function(suffix) {
@@ -75,19 +80,22 @@ function connect() {
 			+ '/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel';
 	mainXhr.open('POST', url, true);
 	mainXhr.onreadystatechange = function() {
-		var chunk = mainXhr.responseText.substring(index,mainXhr.responseText.length);
+		var chunk = mainXhr.responseText.substring(index,
+				mainXhr.responseText.length);
 		index = mainXhr.responseText.length;
-		log("Chunk is: " + chunk); 
-		// Ensure there is at least one complete Channel Response, Event Response, or Heartbeat response in the responseText. Sometimes,
+		log("Chunk is: " + chunk);
+		// Ensure there is at least one complete Channel Response, Event
+		// Response, or Heartbeat response in the responseText. Sometimes,
 		// responses are split across chunks
-		if (chunk.endsWith(EVENT_CLOSE) || chunk.endsWith(CHANNEL_CLOSE) || chunk.endsWith(HEARTBEAT_CLOSE)){
-			// If anything is in the response buffer then add chunk to the buffer, set as response, and then clear the buffer
-			if (responseBuffer != ''){
+		if (chunk.endsWith(EVENT_CLOSE) || chunk.endsWith(CHANNEL_CLOSE)
+				|| chunk.endsWith(HEARTBEAT_CLOSE)) {
+			// If anything is in the response buffer then add chunk to the
+			// buffer, set as response, and then clear the buffer
+			if (responseBuffer != '') {
 				responseBuffer += chunk;
 				response = responseBuffer;
 				responseBuffer = '';
-			}
-			else{
+			} else {
 				response = chunk;
 			}
 			log("complete response is: " + response);
@@ -99,14 +107,17 @@ function connect() {
 			}
 		}
 		// If no complete response then add the chunk to the buffer
-		else{
-				responseBuffer += chunk;
+		else {
+			responseBuffer += chunk;
 		}
 	};
 	mainXhr.onloadend = function() {
 		log('sending disconnected message');
 		channelId = '';
 		clearInterval(heartbeatIntervalId);
+		heartbeatIntervalId = null;
+		clearInterval(updateIntervalId);
+		updateIntervalId = null;
 		state = 'disconnected';
 		// this is the only place that should send a disconnected message
 		sendMessage(state, this.status);
@@ -117,7 +128,7 @@ function connect() {
 	request = request + '<channelSetId>' + channelSetId + '</channelSetId>';
 	request = request + '<priority>1</priority>';
 	request = request + '<weight>100</weight>';
-	request = request + '<expires>3600</expires>';
+	request = request + '<expires>' + EXPIRES + '</expires>';
 	request = request + '<applicationId>broadworks4chrome</applicationId>';
 	request = request + '</Channel>';
 
@@ -127,10 +138,11 @@ function connect() {
 
 function process(chunk) {
 	log('received data: ' + chunk);
-    var xmlDoc = parser.loadXML(chunk).getDocumentElement();
+	var xmlDoc = parser.loadXML(chunk).getDocumentElement();
 
 	if (chunk.indexOf('<Channel ') >= 0) {
-		channelId = xmlDoc.getElementsByTagName('channelId').item(0).getFirstChild().getNodeValue();
+		channelId = xmlDoc.getElementsByTagName('channelId').item(0)
+				.getFirstChild().getNodeValue();
 		log('channelId: ' + channelId);
 		heartbeatIntervalId = setInterval(heartbeat, HEARTBEAT_INTERVAL);
 		status = 'connected';
@@ -138,6 +150,11 @@ function process(chunk) {
 		addEventSubscription(username, "Do Not Disturb");
 		addEventSubscription(username, "Remote Office");
 		addEventSubscription(username, "Call Forwarding Always");
+		// start channel and subscription update timer 5 mins before they expire
+		if (updateIntervalId == null) {
+			updateIntervalId = setInterval(updateChannelAndEventSubscriptions,
+					(EXPIRES - 300) * 1000);
+		}
 	} else if (chunk.indexOf('<ChannelHeartBeat ') >= 0) {
 	} else if (chunk.indexOf('SubscriptionTerminatedEvent') >= 0) {
 		// don't handle these explicitly, just wait for the channel to terminate
@@ -146,20 +163,25 @@ function process(chunk) {
 		// nothing to do here, mainXhr will return after this and the disconnect
 		// message will be sent to background page
 	} else if (chunk.indexOf('<xsi:Event ') >= 0) {
-		var eventId = xmlDoc.getElementsByTagName('xsi:eventID').item(0).getFirstChild().getNodeValue();
+		var eventId = xmlDoc.getElementsByTagName('xsi:eventID').item(0)
+				.getFirstChild().getNodeValue();
 		sendEventResponse(eventId);
-		var eventType = xmlDoc.getElementsByTagName('xsi:eventData').item(0).getAttribute('xsi1:type').trim();
-		eventType = eventType.substring(4);//string off the prefix "xsi:" from the eventType
+		var eventType = xmlDoc.getElementsByTagName('xsi:eventData').item(0)
+				.getAttribute('xsi1:type').trim();
+		eventType = eventType.substring(4);// string off the prefix "xsi:" from
+		// the eventType
 		log('eventType: ' + eventType);
 		switch (eventType) {
 		case 'DoNotDisturbEvent':
 		case 'CallForwardingAlwaysEvent':
 		case 'RemoteOfficeEvent':
-			var active = xmlDoc.getElementsByTagName('xsi:active').item(0).getFirstChild().getNodeValue();
+			var active = xmlDoc.getElementsByTagName('xsi:active').item(0)
+					.getFirstChild().getNodeValue();
 			log('active: ' + active);
 			sendMessage(eventType, active);
 			break;
 		case 'CallSubscriptionEvent':
+		case 'CallOriginatingEvent':
 		case 'CallOriginatedEvent':
 		case 'CallReceivedEvent':
 		case 'CallAnsweredEvent':
@@ -175,28 +197,30 @@ function process(chunk) {
 }
 
 function heartbeat() {
+	// abort mainXhr on heart-beat errors
+	// we will use that to trigger disconnect messages
+	// error on all other requests are ignored, as failed event responses will
+	// eventually cause mainXhr to end
 	if (channelId != '') {
 		log('sending channel heartbeat');
 		var url = hosts[hostIndex] + '/com.broadsoft.xsi-events/v2.0/channel/'
 				+ channelId + '/heartbeat';
-		send('PUT', url, null, true);
-	}
-}
-
-function send(type, url, data, abortOnError) {
-	// send XSI-Events requests and abort mainXhr on heart-beat errors
-	// we will use that to trigger disconnect messages
-	// error on all other requests are ignored, as failed event responses will
-	// eventually cause mainXhr to end
-	log('sending ' + type + ' to ' + url);
-	var xhr = new XMLHttpRequest();
-	xhr.open(type, url, true);
-	if (abortOnError) {
-		xhr.onloadend = function() {
-			if (this.status != 200) {
+		send('PUT', url, null, function(xhr) {
+			if (xhr.status != 200) {
 				log('aborting main xhr');
 				mainXhr.abort();
 			}
+		});
+	}
+}
+
+function send(type, url, data, responseHandler) {
+	log('sending ' + type + ' to ' + url);
+	var xhr = new XMLHttpRequest();
+	xhr.open(type, url, true);
+	if (responseHandler) {
+		xhr.onloadend = function() {
+			responseHandler(xhr);
 		};
 	}
 	xhr.setRequestHeader('Authorization', 'Basic ' + credentials);
@@ -238,39 +262,58 @@ function log(message) {
 	sendMessage('log', LOG_PREFIX + timestamp + '|' + message);
 }
 
-
 function parseCalls(xml) {
-	var calls = new Array();
-    var xmlDoc = parser.loadXML(xml).getDocumentElement();
+	var calls = {};
+	var xmlDoc = parser.loadXML(xml).getDocumentElement();
 
 	var callNodes = xmlDoc.getElementsByTagName('xsi:call');
-	for (i=0;i < callNodes.length;i++){
+	for ( var i = 0; i < callNodes.length; i++) {
 		var call = callNodes.item(i);
-		var callId = call.getElementsByTagName('xsi:callId').item(0).getFirstChild().getNodeValue();
-		var personality = call.getElementsByTagName('xsi:personality').item(0).getFirstChild().getNodeValue();;
-		var state = call.getElementsByTagName('xsi:state').item(0).getFirstChild().getNodeValue();;
-		var remotePartyElement = call.getElementsByTagName('xsi:remoteParty').item(0);
-		var nameElement = remotePartyElement.getElementsByTagName('xsi:name').item(0);
+		var callId = call.getElementsByTagName('xsi:callId').item(0)
+				.getFirstChild().getNodeValue();
+		var personality = call.getElementsByTagName('xsi:personality').item(0)
+				.getFirstChild().getNodeValue();
+		var state = call.getElementsByTagName('xsi:state').item(0)
+				.getFirstChild().getNodeValue();
+		var remotePartyElement = call.getElementsByTagName('xsi:remoteParty')
+				.item(0);
+		var nameElement = remotePartyElement.getElementsByTagName('xsi:name')
+				.item(0);
 		var name = "";
-		if (nameElement != null){
+		if (nameElement != null) {
 			name = nameElement.getFirstChild().getNodeValue();
 		}
 		var address = "";
-		var addressElement = remotePartyElement.getElementsByTagName('xsi:address').item(0);
-		var address  = addressElement.getFirstChild().getNodeValue();
 		var countryCode = "";
-		if (addressElement.hasAttributes()){
-			countryCode = addressElement.getAttribute('countryCode');
-			log("countryCode: " + countryCode);
-
+		var addressElement = remotePartyElement
+				.getElementsByTagName('xsi:address');
+		if (addressElement != null) {
+			var addressNode = addressElement.item(0);
+			if (addressNode != null) {
+				address = addressNode.getFirstChild().getNodeValue();
+				if (addressNode.hasAttributes()) {
+					countryCode = addressNode.getAttribute('countryCode');
+				}
+			}
 		}
-		number = address.replace("tel:","").replace("+"+ countryCode,"+"+ countryCode+ "-");		
+		number = address.replace("tel:", "").replace("+" + countryCode,
+				"+" + countryCode + "-");
+		var startTime = call.getElementsByTagName('xsi:startTime').item(0)
+				.getFirstChild().getNodeValue();
+		var answerTime = null;
+		var answerTimeNode = call.getElementsByTagName('xsi:answerTime')
+				.item(0);
+		if (answerTimeNode) {
+			answerTime = answerTimeNode.getFirstChild().getNodeValue();
+		}
 		calls[callId] = {
 			personality : personality,
 			state : state,
 			name : name,
 			number : number,
-			countryCode: countryCode
+			countryCode : countryCode,
+			startTime : startTime,
+			answerTime : answerTime
 		};
 	}
 	return calls;
@@ -285,11 +328,29 @@ function addEventSubscription(targetId, event) {
 	data = data + "<targetIdType>User</targetIdType>";
 	data = data + "<targetId>" + targetId + "</targetId>";
 	data = data + "<event>" + event + "</event>";
-	data = data + "<expires>3600</expires>";
+	data = data + "<expires>" + EXPIRES + "</expires>";
 	data = data + "<channelSetId>" + channelSetId + "</channelSetId>";
 	data = data + "<applicationId>" + applicationId + "</applicationId>";
 	data = data + "</Subscription>";
-	send("POST", url, data);
+	send("POST", url, data, function(xhr) {
+		if (xhr.status == 200) {
+			var xmlDoc = parser.loadXML(xhr.responseText);
+			var subscriptionId = xmlDoc.getElementsByTagName('subscriptionId')
+					.item(0).getFirstChild().getNodeValue();
+			subscriptionIds[event] = subscriptionId;
+		}
+	});
+}
+
+function updateEventSubscription(subscriptionId) {
+	var url = hosts[hostIndex] + "/com.broadsoft.xsi-events/v2.0/subscription/"
+			+ subscriptionId;
+	var data = XML_HEADER;
+	data = data + "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">";
+	data = data + "<subscriptionId>" + subscriptionId + "</subscriptionId>";
+	data = data + "<expires>" + EXPIRES + "</expires>";
+	data = data + "</Subscription>";
+	send("PUT", url, data);
 }
 
 function sendEventResponse(eventId) {
@@ -304,3 +365,22 @@ function sendEventResponse(eventId) {
 	send("POST", url, data);
 }
 
+function updateChannel() {
+	var url = hosts[hostIndex] + '/com.broadsoft.xsi-events/v2.0/channel/'
+			+ channelId + "/" + channelId;
+	var data = XML_HEADER;
+	data = data + '<Channel xmlns="http://schema.broadsoft.com/xsi">';
+	data = data + '<channelId>' + channelId + '</channelId>';
+	data = data + '<expires>' + EXPIRES + '</expires>';
+	data = data + '</Channel>';
+	send("PUT", url, data);
+}
+
+function updateChannelAndEventSubscriptions() {
+	if (channelId != '') {
+		updateChannel();
+		for ( var event in subscriptionIds) {
+			updateEventSubscription(subscriptionIds[event]);
+		}
+	}
+}
