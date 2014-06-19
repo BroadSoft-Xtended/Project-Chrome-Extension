@@ -501,7 +501,7 @@ function updateCalls() {
 			if (call.personality != "Terminator") {
 				callType = "Outgoing Call";
 			}
-			html = html + "<td>" + nameAndNumber + "<div id='callDuration'>"
+			html = html + "<td>" + nameAndNumber + "<div class='callDuration'>"
 					+ callType + "</div></td>";
 			html = html + "<td>";
 			if (call.personality == "Terminator") {
@@ -513,7 +513,7 @@ function updateCalls() {
 					+ "' src='images/decline.png' /></td>";
 			break;
 		case "Active":
-			html = html + "<td>" + nameAndNumber + "<div id='callDuration'>"
+			html = html + "<td>" + nameAndNumber + "<div class='callDuration'>"
 					+ getCallDuration(call.answerTime) + "</div></td>";
 			html = html + "<td><img id='end_" + callId
 					+ "' src='images/hangup.png' /></td>";
@@ -521,7 +521,7 @@ function updateCalls() {
 					+ "' src='images/hold.png' /></td>";
 			break;
 		case "Held":
-			html = html + "<td>" + nameAndNumber + "<div id='callDuration'>"
+			html = html + "<td>" + nameAndNumber + "<div class='callDuration'>"
 					+ getCallDuration(call.answerTime) + "</div></td>";
 			html = html + "<td><img id='end_" + callId
 					+ "' src='images/hangup.png' /></td>";
@@ -566,7 +566,7 @@ function hhmmssToString(hh, mm, ss) {
 }
 
 function updateCallDurations() {
-	$("#callDuration").each(function() {
+	$(".callDuration").each(function() {
 		var duration = $(this).text();
 		if (duration != "Incoming Call" && duration != "Outgoing Call") {
 			duration = incrementCallDuration(duration);
