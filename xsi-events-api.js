@@ -150,6 +150,7 @@ function process(chunk) {
 		addEventSubscription(username, "Do Not Disturb");
 		addEventSubscription(username, "Remote Office");
 		addEventSubscription(username, "Call Forwarding Always");
+		addEventSubscription(username, "Voice Mail Message Summary");
 		// start channel and subscription update timer 5 mins before they expire
 		if (updateIntervalId == null) {
 			updateIntervalId = setInterval(updateChannelAndEventSubscriptions,
@@ -191,6 +192,10 @@ function process(chunk) {
 		case 'CallUpdatedEvent':
 			var calls = parseCalls(chunk);
 			sendMessage(eventType, calls);
+			break;
+		case 'VoiceMailMessageSummaryEvent':
+			var vm = parseVoiceMailMessageSummary(chunk);
+			sendMessage(eventType, vm);
 			break;
 		}
 	}
@@ -317,6 +322,37 @@ function parseCalls(xml) {
 		};
 	}
 	return calls;
+}
+
+function parseVoiceMailMessageSummary(xml) {
+	var newMessages = 0;
+	var oldMessages = 0;
+	var newUrgentMessages = 0;
+	var oldUrgentMessages = 0;
+	var xmlDoc = parser.loadXML(xml).getDocumentElement();
+	var node = xmlDoc.getElementsByTagName('xsi:newMessages').item(0);
+	if (node) {
+		newMessages = node.getFirstChild().getNodeValue();
+	}
+	var node = xmlDoc.getElementsByTagName('xsi:oldMessages').item(0);
+	if (node) {
+		oldMessages = node.getFirstChild().getNodeValue();
+	}
+	var node = xmlDoc.getElementsByTagName('xsi:newUrgentMessages').item(0);
+	if (node) {
+		newUrgentMessages = node.getFirstChild().getNodeValue();
+	}
+	var node = xmlDoc.getElementsByTagName('xsi:oldUrgentMessages').item(0);
+	if (node) {
+		oldUrgentMessages = node.getFirstChild().getNodeValue();
+	}
+	var vm = {
+		newMessages : newMessages,
+		oldMessages : oldMessages,
+		newUrgentMessages : newUrgentMessages,
+		oldUrgentMessages : oldUrgentMessages
+	};
+	return vm;
 }
 
 function addEventSubscription(targetId, event) {

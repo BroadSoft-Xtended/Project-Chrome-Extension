@@ -1,7 +1,7 @@
 {
-  "name" : "BroadSoft Xtended Dialer for Google Chrome™",
+  "name" : "Test Xtended Dialer",
   "short_name": "Xtended Dialer",
-  "version" : "1.4",
+  "version" : "2.2",
   "description" : "A Google Chrome™ extension that provides BroadWorks telephony integration.",
   "manifest_version": 2,
   "omnibox": { "keyword" : "-call" },
@@ -33,7 +33,7 @@
   ],
   "permissions": [ "notifications", "tabs", "http://*/*", "https://*/*", "tts" ,"identity"],
   "oauth2": {
-   "client_id": "943920862649-69lpkph1picvbn3t9669uh609rnviri9.apps.googleusercontent.com",
+   "client_id": "943920862649-qifbrt8dukb56jq26hb25nmegkssocom.apps.googleusercontent.com",
     "scopes": [
       "https://www.google.com/m8/feeds/"
     ]

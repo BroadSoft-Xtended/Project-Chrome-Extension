@@ -26,8 +26,7 @@ function onMessage(request, sender, sendResponse) {
 		var destination = request.text.replace(/[- \(\)\.]/g, "");
 		var status = "ok";
 		try {
-			LOGGER.API.log(MODULE, "calling: " + destination);
-			XSIACTIONS.API.call(destination);
+			call(destination);
 		} catch (error) {
 			status = "error";
 		}
@@ -119,7 +118,7 @@ function onEntered(text) {
 	var normalized = text.replace("+", "");
 	LOGGER.API.log(MODULE, normalized);
 	try {
-		XSIACTIONS.API.call(normalized);
+		call(normalized);
 	} catch (error) {
 		LOGGER.API.error(MODULE, "onEntered error: " + error.message);
 	}
@@ -326,6 +325,16 @@ function contentLoaded() {
 							}
 							localStorage["calls"] = JSON.stringify(lCalls);
 							break;
+						case 'VoiceMailMessageSummaryEvent':
+							var badge = '';
+							var newMessages = e.data.value.newMessages;
+							if (newMessages > 0) {
+								badge = '' + newMessages;
+							}
+							chrome.browserAction.setBadgeText({
+								text : badge
+							});
+							break;
 						case 'log':
 							LOGGER.API.log(MODULE, e.data.value);
 							break;
@@ -342,6 +351,34 @@ function sendStartMessage() {
 	xsiEvents.postMessage({
 		cmd : 'start'
 	});
+}
+
+function call(destination) {
+	if (localStorage["usewebrtc"] == "true") {
+		if (localStorage["webrtctype"] == "web") {
+			var webrtcUrl = localStorage['url'] + '/webrtc/?destination='
+					+ destination + '&name='
+					+ encodeURIComponent(localStorage['name']) + '&userid='
+					+ encodeURIComponent(localStorage['username']);
+			// HACK: change https to http as https doesn't work with current
+			// WebRTC client
+			webrtcUrl = webrtcUrl.replace("https", "http");
+			LOGGER.API.log(MODULE, "calling: " + destination
+					+ " using WebRTC url: " + webrtcUrl);
+			chrome.tabs.create({
+				url : webrtcUrl
+			});
+		} else {
+			chrome.runtime.sendMessage("codogaabpgagicgebnnbnenebhbaaepn", {
+				type : "CALL",
+				number : destination
+			});
+		}
+	} else {
+		LOGGER.API.log(MODULE, "calling: " + destination
+				+ " using click-to-dial");
+		XSIACTIONS.API.call(destination);
+	}
 }
 
 document.addEventListener('DOMContentLoaded', contentLoaded);

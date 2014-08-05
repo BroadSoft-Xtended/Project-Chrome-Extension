@@ -19,7 +19,7 @@ limitations under the License.
 <link rel="stylesheet" type="text/css" href="style.css" />
 <link rel="stylesheet" href="jquery-ui.css" />
 <style>
-.ui-autocomplete{
+.ui-autocomplete {
 	max-height: 100px;
 	width: 80px;
 	overflow-y: scroll;
@@ -32,7 +32,7 @@ limitations under the License.
 
 	<div id="signout_link_tabs">
 		<div id="signout">
-					<a href="#" tabindex="-1">sign out</a>
+			<a href="#" tabindex="-1">sign out</a>
 		</div>
 	</div>
 	<div id="tabs">
@@ -73,12 +73,20 @@ limitations under the License.
 				<input id="texttospeechbox" type="checkbox" checked />&nbsp;Enable
 				text to speech
 			</div>
+			<div id="usewebrtc">
+				<input id="usewebrtcbox" type="checkbox" checked />&nbsp;Use WebRTC<br />
+				&nbsp;<input type="radio" name="webrtctype" value="packaged" />&nbsp;
+				Chrome&trade; Packaged App <br /> &nbsp;<input type="radio"
+					name="webrtctype" value="web" />&nbsp; Web-based
+			</div>
 		</div>
 	</div>
 	<div id="toolbar">
-		<img id="robutton" src="images/remoteoffice_disabled.png" title="Remote Office" /> 
-		<img id="cfabutton" src="images/callforward_disabled.png" title="Call Forwarding Always" />
-		<img id="dndbutton" src="images/dnd_disabled.png" title="Do Not Disturb" />
+		<img id="robutton" src="images/remoteoffice_disabled.png"
+			title="Remote Office" /> <img id="cfabutton"
+			src="images/callforward_disabled.png" title="Call Forwarding Always" />
+		<img id="dndbutton" src="images/dnd_disabled.png"
+			title="Do Not Disturb" />
 	</div>
 	<div id="whitespace_below_toolbar"></div>
 	<div id="about_link_tabs">

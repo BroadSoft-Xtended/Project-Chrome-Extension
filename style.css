@@ -323,6 +323,13 @@ ul.ui-autocomplete {
 	bottom: 80px;
 }
 
+#usewebrtc {
+	position: absolute;
+	left: 10px;
+	bottom: 24px;
+	text-align: left;
+}
+
 #destination {
 	width: 240px;
 	margin-top: 10px;

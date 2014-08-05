@@ -41,7 +41,13 @@ $("#calllogentries").disableSelection();
 $("#calllogentries").on("dblclick", "tr", function(e) {
 	e.preventDefault();
 	var number = $(this).attr("id").replace(/calllogentry.*_/g, "");
-	XSIACTIONS.API.call(number);
+	chrome.runtime.sendMessage({
+		type : "CALL",
+		text : number
+	}, function(response) {
+		console.log(response.status);
+	});
+	// XSIACTIONS.API.call(number);
 });
 
 // dialer
@@ -138,7 +144,13 @@ $("#destination")
 							LOGGER.API.log(MODULE, "number:" + number
 									+ " tokens:" + tokens);
 							if (tokens) {
-								XSIACTIONS.API.call(tokens[0]);
+								chrome.runtime.sendMessage({
+									type : "CALL",
+									text : number
+								}, function(response) {
+									console.log(response.status);
+								});
+								// XSIACTIONS.API.call(tokens[0]);
 							}
 						} catch (error) {
 							LOGGER.API.error(MODULE, error.message);
@@ -175,6 +187,22 @@ document.querySelector('#texttospeechbox').addEventListener('click',
 			var texttospeech = $("#texttospeechbox").prop("checked");
 			localStorage["texttospeech"] = texttospeech;
 		});
+
+// Use WebRTC checkbox
+document.querySelector('#usewebrtcbox').addEventListener('click', function() {
+	var usewebrtc = $("#usewebrtcbox").prop("checked");
+	localStorage["usewebrtc"] = usewebrtc;
+	if (usewebrtc == true) {
+		$("input:radio[name=webrtctype]").removeAttr("disabled");
+	} else {
+		$("input:radio[name=webrtctype]").attr("disabled", true);
+	}
+});
+
+// WebRTC type radio button
+$("input[name=webrtctype]").change(function() {
+	localStorage["webrtctype"] = $("input[name=webrtctype]:checked").val();
+});
 
 // Do Not disturb button
 document.querySelector('#dndbutton').addEventListener('click', function() {
@@ -263,6 +291,8 @@ function signout(manual) {
 		localStorage["clicktodial"] = "";
 		localStorage["notifications"] = "";
 		localStorage["texttospeech"] = "";
+		localStorage["usewebrtc"] = "";
+		localStorage["webrtctype"] = "";
 		localStorage["errorMessage"] = "";
 	}
 	top.location.assign("options.html");
@@ -453,6 +483,22 @@ function restoreTabs() {
 		$("#texttospeechbox").prop('checked', true);
 	} else {
 		$("#texttospeechbox").prop('checked', false);
+	}
+
+	var usewebrtc = localStorage["usewebrtc"];
+	if (usewebrtc == "true") {
+		$("#usewebrtcbox").prop('checked', true);
+		$("input:radio[name=webrtctype]").removeAttr("disabled");
+	} else {
+		$("#usewebrtcbox").prop('checked', false);
+		$("input:radio[name=webrtctype]").attr("disabled", true);
+	}
+
+	var webrtctype = localStorage["webrtctype"];
+	if (webrtctype == "web") {
+		$('input:radio[name=webrtctype]')[1].checked = true;
+	} else {
+		$('input:radio[name=webrtctype]')[0].checked = true;
 	}
 
 	updateCalls();
